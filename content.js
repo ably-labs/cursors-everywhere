@@ -1,3 +1,4 @@
+
 // content.js
 // Initialize Ably
 let clientId = 'User-' + Math.random().toString(36).substr(2, 9);  // Generate a random clientId
@@ -22,14 +23,31 @@ let cursorCommunicationEnabled = false;
 // Listen for cursor movements
 document.addEventListener('mousemove', function(e) {
   if (cursorCommunicationEnabled) {
+    // Find the element that the cursor is currently hovering over
+    let element = document.elementFromPoint(e.clientX, e.clientY);
+    let elementClassAndID = '';
+    if (element.className) elementClassAndID = `.${element.className}`;
+    elementClassAndID = elementClassAndID.replaceAll(' ', '.').replaceAll(':', '\\:');
+    if (element.id) elementClassAndID += ` #${element.id}`;
+
+    // Get the cursor position relative to the element
+    let rect = element.getBoundingClientRect();
+    let x = e.pageX;
+    let y = e.pageY;
+
+    let xElement = e.pageX - rect.left;
+    let yElement = e.pageY - rect.top;
+
     // Save the cursor position and the current time
     let now = performance.now();
     if (!baseTime) {
       baseTime = now;
     }
-    positions.push({x: e.pageX, y: e.pageY, time: now - baseTime});
+
+    positions.push({x, y, xElement, yElement, time: now - baseTime, element: elementClassAndID });
   }
 });
+
 
 // Every second, publish the cursor positions for the past second
 setInterval(function() {
@@ -70,16 +88,35 @@ channel.presence.subscribe('update', function(presenceMsg) {
       });
     }
     if (!data.positions) return;
+
     // Replay the cursor movements for this user
     data.positions.forEach(function(position) {
       setTimeout(function() {
         if (!cursors[presenceMsg.clientId]) return;
-        cursors[presenceMsg.clientId].style.left = position.x + 'px';
-        cursors[presenceMsg.clientId].style.top = position.y + 'px';
+        // Check if the element is visible
+        let elements;
+        let element;
+        if (position.element) elements = document.querySelectorAll(position.element);
+        if (elements && elements.length == 1) element = elements[0];
+        if (elements) console.log(elements.length);
+
+        if (element) {
+          // Position the cursor relative to the element
+          if (typeof element.getBoundingClientRect === 'function') {
+            let rect = element.getBoundingClientRect();
+            cursors[presenceMsg.clientId].style.left = (rect.left + position.xElement) + 'px';
+            cursors[presenceMsg.clientId].style.top = (rect.top + position.yElement) + 'px';
+          }
+        } else {
+          // Position the cursor at the absolute coordinates
+          cursors[presenceMsg.clientId].style.left = position.x + 'px';
+          cursors[presenceMsg.clientId].style.top = position.y + 'px';
+        }
       }, position.time);
     });
   }
 });
+
 
 // Subscribe to presence leave events from other users
 channel.presence.subscribe('leave', function(presenceMsg) {
@@ -155,9 +192,6 @@ function getRandomColor() {
   return color;
 }
 
-// Enter this user into the presence set
-channel.presence.enter({color: color});
-
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.method === 'setCursorCommunication') {
@@ -165,8 +199,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     if (cursorCommunicationEnabled) {
       fetchPresenceSet();
+      channel.presence.enter({color: color});
     } else {
       clearCursors();
+      channel.presence.leave();
     }
   }
 });
