@@ -12,7 +12,7 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["ably.min.js", "content.js"]
+      "js": ["ably.min.js", "spaces.min.js", "content.js"]
     }
   ]
 }
