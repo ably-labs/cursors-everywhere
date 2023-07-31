@@ -1,14 +1,8 @@
-
-https://github.com/ably-labs/cursors-everywhere/assets/9784119/bd8c1171-8941-4cbe-aaba-34eb6c9c4b42
 # Shared Cursors Everywhere: Building a Cross-Browser Plugin
-
-## Introduction
 
 Working with collaboration tools like [Miro](https://miro.com/) and [VS Code Live Share](https://code.visualstudio.com/learn/collaboration/live-share) has transformed my expectations of collaborative interactions. However, I found myself trying to move my cursor around websites during calls with colleagues, despite not sharing my screen. It was as if I believed they could see my cursor. I even caught myself saying, 'and when I click here...', only to realize I was sharing with nothing but the void.
 
 To save myself from further embarrassment, I decided to tackle this issue head-on. I thought, "Why not create a way to share cursors across any website?" The task seemed straightforward: share some positions, right?
-
-![meme](https://www.google.com/url?sa=i&url=https%3A%2F%2Fxkcd.com%2F927%2F&psig=AOvVaw2cWDmKFcouKyOL-Uss41_8&ust=1690885489005000&source=images&cd=vfe&opi=89978449&ved=0CBAQjRxqFwoTCMCD67jduIADFQAAAAAdAAAAABAE).
 
 If you find this intriguing, join me on this adventure of building a cross-browser plugin. This post provides a transparent look into the decisions made and the challenges faced, from handling diverse web layouts to dealing with different browser behaviors and performance considerations. Let's dive in!
 
@@ -71,7 +65,7 @@ channel.presence.subscribe((presenceMessage) => {
 
 Now for the moment of truth. Was it really that easy?
 
-https://github.com/ably-labs/cursors-everywhere/assets/9784119/2a388f99-28fa-428e-a491-43980f17e32c
+![onlyPos](https://github.com/ably-labs/cursors-everywhere/assets/9784119/2ef875d7-8d6e-4940-a2da-9926e23cd61c)
 
 Unfortunately, no. The issue was that everyone's browser dimensions varied, meaning the browser positions of cursors did not map between clients. This approach could work for websites with no adjusting elements, which enforced a static size. However, for anything more complex, this would likely be more misleading than useful.
 
@@ -246,8 +240,6 @@ space.cursors.subscribe("cursorsUpdate", function(cursorUpdate) {
 
 By considering the element under the cursor, we improved the accuracy of cursor sharing and made the shared browsing experience more consistent across different browsers and devices.
 
-https://github.com/ably-labs/cursors-everywhere/assets/9784119/aa104a04-a171-45db-9988-79b985fa999a
-
 ### Still Not Quite There...
 
 Although we now have better cursor positioning than before, we still have issues. Although we can sometimes represent the element we want to highlight with the CSS path, it's not something we can rely on. As seen in the above gif, the cursor will jump to quite differing locations as the solution swaps between element positioning and just using the x and y coordinates.
@@ -323,7 +315,8 @@ export default function DesktopView() {
   );
 }
 ```
-https://github.com/ably-labs/cursors-everywhere/assets/9784119/a0fec63f-7b13-4453-a21d-dca86f8c9489
+
+![identifiedLetters](https://github.com/ably-labs/cursors-everywhere/assets/9784119/4990b93e-b745-46f9-9bce-1b59edfd6b4f)
 
 With that all done, I was quite happy with the results of this specially designed website. Unfortunately, making this plugin work in a general-purpose way for all existing website was still quite a while away.
 
