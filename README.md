@@ -10,7 +10,7 @@ If you find this intriguing, join me on this adventure of building a cross-brows
 
 ### The Plan
 
-The first step was defining the requirements for this "Cursors Everywhere" concept. A Chrome Plugin seemed like a logical medium—it's shareable even with my non-technical colleagues and can easily access browser details like URLs and active tabs. Consequently, JavaScript became the language of choice.
+The first step was defining the requirements for this "Cursors Everywhere" concept. A Chrome Plugin seemed like a logical medium—it's shareable with my non-technical colleagues and can easily access browser details like URLs and active tabs. Consequently, JavaScript became the language of choice.
 
 The next question was: how to share the cursor positions? 
 
