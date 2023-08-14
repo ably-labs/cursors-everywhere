@@ -1,14 +1,26 @@
 # Cursor Position Sharing: An Adventure in Web Development
 
-The web is becoming more interactive every day, and as we move towards a more digital society, the need for collaborative tools is increasing. One of these is the ability to share cursor positions across different clients, providing a more collaborative and interactive browsing experience.
+Working with collaboration tools like [Miro](https://miro.com/) and [VS Code Live Share](https://code.visualstudio.com/learn/collaboration/live-share) has transformed my expectations of collaborative interactions. However, I found myself trying to move my cursor around websites during calls with colleagues, despite not sharing my screen. It was as if I believed they could see my cursor. I even caught myself saying, 'and when I click here...', only to realize I was sharing with nothing but the void.
 
-For a while, I've been playing around with an open-source plugin I developed called ["Cursors Everywhere"](https://github.com/ably-labs/cursors-everywhere). It's a simple idea: wherever your cursor is on a webpage, it also appears in the same place for anyone else viewing that page. While the concept is simple, the execution is... less so.
+If you find this intriguing, join me on this adventure of building a cross-browser plugin. This post provides a transparent look into the decisions made and the challenges faced, from handling diverse web layouts to dealing with different browser behaviors and performance considerations. Let's dive in!
 
-## The Original Approach: Absolute Positioning
+## The Making of the Plugin
 
-My initial approach was to share the cursor's absolute position in pixels. When a user moves their cursor, I sent the X and Y coordinates to other clients using [Ably's](https://www.ably.com/) realtime messaging platform. On receiving the coordinates, the clients would then display a cursor icon at the corresponding position.
+### The Plan
 
-Here's a simplified version of the code I used:
+The first step was defining the requirements for this "Cursors Everywhere" concept. A Chrome Plugin seemed like a logical medium—it's shareable with my non-technical colleagues and can easily access browser details like URLs and active tabs. Consequently, JavaScript became the language of choice.
+
+The next question was: how to share the cursor positions? 
+
+A realtime protocol like WebSockets seemed like a logical way to share real-time updates of cursor positions. Working at Ably, it was a no-brainer to use it as my WebSocket-based pub/sub broker. A pub/sub broker simplifies many aspects of projects like this, often coming with built-in features that speed up development. For instance, I wanted each browser's cursor position to be continually available to other clients on the page. To achieve this, I could use the [Presence](https://ably.com/docs/presence-occupancy/presence) feature of Ably, which maintains a set of attributes associated with each client and its connection.
+
+### Step 1: Starting with the Basics - Sharing X and Y Coordinates
+
+I began with a Chrome Plugin and Ably, expecting the remaining work to be minimal. My job was to add a listener for the cursor, publish a cursor's position to Ably, and share it with other clients. Ably's Channels could naturally segregate data sets, so each web page could have a unique Ably Channel to hold its cursor positions. Other clients would listen to these channels using the Ably Client library, ready to render cursors in the appropriate position.
+
+#### Capturing Cursor Movements
+
+The first task was capturing cursor movements, achieved by attaching an event listener to the `mousemove` event in JavaScript. This event fires whenever the cursor moves, providing the X and Y coordinates of the cursor at that time. Here's a snippet of how I achieved this:
 
 ```javascript
 // Using Ably for realtime messaging
@@ -31,7 +43,7 @@ channel.subscribe("position", function(message) {
 
 This approach worked... technically. However, it had a number of issues. Most importantly, it did not take into account different screen sizes and resolutions. The same absolute coordinates represented different positions on different screens, leading to inconsistent cursor positions across clients.
 
-**Insert Image Here:** An illustration showing how the same absolute cursor position appears differently on screens of different sizes would be helpful here.
+#### Sharing the Coordinates
 
 ## Improving the Original Approach: Relative Positioning
 
@@ -55,7 +67,15 @@ channel.subscribe("position", function(message) {
 });
 ```
 
-While this was an improvement, it still wasn't perfect. The cursor position was more consistent across different screen sizes, but it was still affected by differences in aspect ratio and page layout. Additionally, the position still didn't account for page scrolling or elements moving around on the page.
+#### The Result
+
+Now for the moment of truth. Was it really that easy?
+
+![onlyPos](https://github.com/ably-labs/cursors-everywhere/assets/9784119/2ef875d7-8d6e-4940-a2da-9926e23cd61c)
+
+Unfortunately, no. The issue was that everyone's browser dimensions varied, meaning the browser positions of cursors did not map between clients. This approach could work for websites with no adjusting elements, which enforced a static size. However, for anything more complex, this would likely be more misleading than useful.
+
+### How Professionals Do It: Miro's Approach
 
 **Insert Image Here:** A demonstration showing how relative cursor positioning improves consistency across different screen sizes but still has issues with aspect ratio and page layout.
 
@@ -63,11 +83,9 @@ While this was an improvement, it still wasn't perfect. The cursor position was 
 
 The amount of messages being sent was another major issue. Every time a user moved their cursor, a new message was sent. This led to a large volume of messages, which could slow down the browser and consume a lot of bandwidth.
 
-To reduce the number of messages, I introduced two techniques: position interpolation and message batching.
+## Step 1.1: Position Interpolation and Message Batching for Bandwidth Efficiency
 
 ### Position Interpolation
-
-Instead of sending a message for every single cursor position, I decided to send messages for a subset of positions and interpolate the rest. This means that instead of sending positions `p1, p2, p3, p4, p5`, I could just send `p1, p3, p5` and calculate `p2` and `p4` as averages of the positions before and after.
 
 Here's a rough example of position interpolation from the publishing side:
 
@@ -92,8 +110,6 @@ document.addEventListener("mousemove", function(event) {
 ```
 
 In this code, we keep track of the last cursor position (`lastPosition`). When the cursor moves, we calculate the interpolated positions between the last position and the new position using a helper function (`interpolate`). We then send these interpolated positions instead of the actual positions.
-
-**Insert Image Here:** A diagram showing how position interpolation and message batching work would be helpful here. The diagram could show a series of cursor movements, the points selected for interpolation, and how these points are batched into messages.
 
 ### Message Batching
 
@@ -142,9 +158,90 @@ The Spaces SDK handles the publishing of data, automatically batching cursor upd
 
 ## Step 2: Taking Into Account the Element Under the Cursor
 
-With the existing solution improved, it was time to address the real issue: accurate cursor position representation. Depending on the browser, device, and individual website
+With the existing solution improved it was time to address the real issue: accurate cursor position representation. Depending on the browser, device, and individual website design, the same coordinates can point to different elements on different users' screens.
 
- designs, elements can appear in different places and even take up different amounts of space. Furthermore, we had yet to address the premise of certain elements only existing for certain clients. For example, it's not uncommon for certain elements to appear only on mobile devices, and others on monitors.
+After some thought, it dawned on me that the goal was usually to point at some form of **element** on the page, be it a button, a text box, or something else. Perhaps combining element identifiers and positions would bring us a step closer to accurately representing cursor position.
+
+### Element Identification
+
+Ideally, each element would have a unique `id`, allowing us to communicate said id and call it a day. Unfortunately, many websites do not assign ids to all elements. To achieve my goal, I needed a way to uniquely identify each element on a webpage. Eventually, I decided to use the CSS path of the element, a string that describes the element's location in the DOM tree. If an element has an id, we've uniquely identified it already. If not, we can attempt to uniquely identify it by this path.
+
+```javascript
+function getCSSPath(element) {
+	let path = [];
+	while (element.nodeType === Node.ELEMENT_NODE) {
+    	let selector = element.nodeName.toLowerCase();
+    	if (element.id) {
+        	selector += "#" + element.id;
+    	} else {
+        	let sibling = element;
+        	let siblingSelectors = [];
+        	while (sibling !== null && sibling.nodeType === Node.ELEMENT_NODE) {
+            	siblingSelectors.unshift(sibling.nodeName.toLowerCase());
+            	sibling = sibling.previousSibling;
+        	}
+        	if (siblingSelectors.length > 0) {
+            	selector += ":nth-child(" + siblingSelectors.length + ")";
+        	}
+    	}
+    	path.unshift(selector);
+    	element = element.parentNode;
+	}
+	return path.join(" > ");
+}
+```
+
+This function traverses up the DOM tree from the given element, building a string that uniquely identifies the element.
+
+### Including Element in Cursor Position
+
+I then modified the `mousemove` event handler to get the CSS path of the current element and include it in the cursor position data:
+
+```javascript
+document.addEventListener("mousemove", function(event) {
+	let x = event.clientX;
+	let y = event.clientY;
+	let elements = document.elementsFromPoint(x, y);
+	let element = elements[0];
+	let elementPath = getCSSPath(element);
+
+	// Other code...
+
+	let cursorPosition = {
+    	x,
+    	y,
+    	element: elementPath
+	};
+
+	// Other code...
+});
+```
+
+### Replaying Cursor Movements
+
+When replaying cursor movements on the client side, we used the CSS path to find the corresponding element and position the cursor relative to that element. If the element was not found (e.g., because the DOM has changed), it can fall back to positioning the cursor at the absolute X and Y coordinates.
+
+```javascript
+space.cursors.subscribe("cursorsUpdate", function(cursorUpdate) {
+	let position = cursorUpdate.position;
+	let element = document.querySelector(position.element);
+	if (element) {
+    	// Position cursor relative to the element...
+	} else {
+    	// Position cursor at absolute coordinates...
+	}
+});
+```
+
+By considering the element under the cursor, we improved the accuracy of cursor sharing and made the shared browsing experience more consistent across different browsers and devices.
+
+### Still Not Quite There...
+
+Although we now have better cursor positioning than before, we still have issues. Although we can sometimes represent the element we want to highlight with the CSS path, it's not something we can rely on. As seen in the above gif, the cursor will jump to quite differing locations as the solution swaps between element positioning and just using the x and y coordinates.
+
+Additionally, within elements themselves, it doesn't work well if they themselves can change form. For example, a common use-case I'd expect from this plugin would be to indicate a word in a paragraph of text. Unless we have specific spans or ids on each letter, we'll just be using the element as the entire paragraph's element. This means that as a display scales up/down, the text will wrap around, and result in the specific coordinates within our paragraph element for a word or letter varying from client to client.
+
+This isn't to mention the premise of certain elements only existing for certain clients. For example, it's not irregular to have certain elements appear only on mobile devices, and others on monitors.
 
 ## Improving Websites for Cursor Tracking
 
@@ -165,8 +262,6 @@ For example:
 ```
 
 This level of detail could significantly enhance the shared cursor experience, providing more precise and meaningful cursor positions.
-
-**Insert Image Here:** An annotated screenshot showing a web page with interactive elements marked with unique identifiers would be useful here.
 
 ### 2. Mapping Elements Across Different Views
 
@@ -216,9 +311,9 @@ export default function DesktopView() {
 }
 ```
 
-**Insert Image Here:** A side-by-side comparison of a website's desktop and mobile views, with equivalent elements highlighted and marked with the same identifiers, would effectively illustrate this concept.
+![identifiedLetters](https://github.com/ably-labs/cursors-everywhere/assets/9784119/4990b93e-b745-46f9-9bce-1b59edfd6b4f)
 
-With that all done, I was quite happy with the results on this specially designed website. Unfortunately, making this plugin work in a general-purpose way for all existing website was still quite a while away.
+With that all done, I was quite happy with the results of this specially designed website. Unfortunately, making this plugin work in a general-purpose way for all existing website was still quite a while away.
 
 ## Conclusion
 
@@ -229,5 +324,3 @@ I hope that sharing this experience might help others when it comes to creating 
 I'm expecting to see more and more sites implementing shared interactive elements to their sites as the technologies required for it become cheaper and easier to use. With this change, I anticipate a shift in website design to better accommodate these functionalities. Maybe one day it'll be more viable to make general-purpose tools such as this Cursors Everywhere project. For now, I'll just have to make sure I'm sharing my screen when trying to point at things.
 
 If you're interested in the code for the project as it stands, you can find it on [GitHub](https://github.com/ably-labs/cursors-everywhere).
-
-**Insert Image Here:** An image of the finished plugin in action, showing shared cursors on a web page, would be a great way to conclude the blog post.
