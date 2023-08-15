@@ -43,8 +43,6 @@ channel.subscribe("position", function(message) {
 
 This approach worked... technically. However, it had a number of issues. Most importantly, it did not take into account different screen sizes and resolutions. The same absolute coordinates represented different positions on different screens, leading to inconsistent cursor positions across clients.
 
-#### Sharing the Coordinates
-
 ## Improving the Original Approach: Relative Positioning
 
 To address this, I modified the approach to use relative positions instead of absolute positions. I represented the cursor position as a percentage of the total width and height of the page. This provided more consistent cursor positions across different screen sizes.
@@ -322,5 +320,3 @@ At the end of this adventure, I'd unfortunately fallen short of designing a solu
 I hope that sharing this experience might help others when it comes to creating their own interactive elements on their own sites. Although this can be a massive challenge to implement generically across all websites, that's different when it's your own website. When you're in control of how you lay out your website, you have the power to enforce proper identification of elements, and choose where on the site to say make use of a canvas technique that large players in the field such as Miro employ.
 
 I'm expecting to see more and more sites implementing shared interactive elements to their sites as the technologies required for it become cheaper and easier to use. With this change, I anticipate a shift in website design to better accommodate these functionalities. Maybe one day it'll be more viable to make general-purpose tools such as this Cursors Everywhere project. For now, I'll just have to make sure I'm sharing my screen when trying to point at things.
-
-If you're interested in the code for the project as it stands, you can find it on [GitHub](https://github.com/ably-labs/cursors-everywhere).
