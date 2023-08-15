@@ -1,4 +1,4 @@
-# Cursor Position Sharing: An Adventure in Web Development
+# Cursor Everywhere: An experiment on shared cursors for every website
 
 Working with collaboration tools like [Miro](https://miro.com/) and [VS Code Live Share](https://code.visualstudio.com/learn/collaboration/live-share) has transformed my expectations of collaborative interactions. However, I found myself trying to move my cursor around websites during calls with colleagues, despite not sharing my screen. It was as if I believed they could see my cursor. I even caught myself saying, 'and when I click here...', only to realize I was sharing with nothing but the void.
 
